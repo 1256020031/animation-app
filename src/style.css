@@ -1,0 +1,61 @@
+/* 全局初始化 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 根元素基础样式 */
+html {
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 页面默认字体与背景 */
+body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  line-height: 1.5;
+  color: #333;
+  background-color: #fff;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 图片默认响应式 */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 链接默认样式 */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 按钮默认去掉边框与背景 */
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* 列表默认去掉符号 */
+ul, ol {
+  list-style: none;
+}
+
+/* 表格默认合并边框 */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
