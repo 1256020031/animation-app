@@ -3,6 +3,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import 'vant/lib/index.css';
+import { getAnimeDetail } from '@/api/index.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -28,7 +29,7 @@ interface AnimeDetail {
 }
 
 // --- 模拟数据 ---
-const animeData = reactive<AnimeDetail>({
+let animeData = reactive<AnimeDetail>({
   id: '1',
   title: '鬼灭之刃 刀匠村篇',
   cover: 'https://images.unsplash.com/photo-1612487528505-d2338264c821?q=80&w=800', // 这里的封面通常是横图
@@ -79,6 +80,15 @@ const handlePlayClick = () => {
 const toggleFavorite = () => {
   showToast({ message: '已加入追番列表 ❤️', icon: 'like' });
 };
+  const { id } = route.params;
+  const loadDetail = async () => {
+    const res = await getAnimeDetail(id)
+    // animeData = res.data
+  }
+  onMounted(() => {
+    loadDetail()
+
+  });
 
 </script>
 

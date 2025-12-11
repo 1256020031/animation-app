@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { reactive, ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { showToast } from 'vant';
+import { showToast, showLoadingToast, closeToast } from 'vant';
 import 'vant/lib/index.css';
+import { getBanners, getNewAnime, getHotAnime, getClassicRecommend, getFinishedList } from '@/api/index.js';
 
 // --- 类型定义 ---
 type AnimeStatus = '已完结' | '更新中';
@@ -24,11 +25,23 @@ interface SectionData {
   list: AnimeCard[];
 }
 
+interface Banner {
+  id: number;
+  image_url: string;
+  title: string;
+  sort: number;
+}
+
 // --- 1. 轮播图数据 ---
-const banners = [
-  'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1626544827763-d516dce335ca?q=80&w=800&auto=format&fit=crop',
-];
+const banners = ref<Banner[]>([]);
+const queryBanners = async () => {
+  try {
+    const res = await getBanners()
+    banners.value = res.data.data as Banner[];
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 // --- 2. 模拟数据生成器 ---
 // 为了演示，我们生成一些看起来像真的一样的数据
@@ -54,12 +67,55 @@ const generateList = (count: number): AnimeCard[] => {
 };
 
 // --- 3. 四大板块数据 ---
-const sections = reactive<SectionData[]>([
-  { key: 'recommend', title: '每日推荐', icon: 'fire-o', list: generateList(6) },
-  { key: 'update', title: '最近更新', icon: 'clock-o', list: generateList(6) },
-  { key: 'rank', title: '热门排行', icon: 'chart-trending-o', list: generateList(6) },
-  { key: 'score', title: '最高评分', icon: 'star-o', list: generateList(6) },
+// 使用 ref 定义各个板块的数据
+const newList = ref<AnimeCard[]>([]);
+const hotList = ref<AnimeCard[]>([]);
+const recommendList = ref<AnimeCard[]>([]);
+const finishedList = ref<AnimeCard[]>([]);
+
+// sections 使用计算属性，自动响应数据变化
+const sections = computed(() => [
+  { key: 'new', title: '新番连载', icon: 'fire-o', list: newList.value },
+  { key: 'hot', title: '热门追番', icon: 'clock-o', list: hotList.value },
+  { key: 'recommend', title: '经典推荐', icon: 'chart-trending-o', list: recommendList.value },
+  { key: 'finished', title: '完结佳作', icon: 'star-o', list: finishedList.value },
 ]);
+// 查询新番数据
+const queryNewAnime = async () => {
+  try {
+    const res = await getNewAnime()
+    newList.value = res.data.data as AnimeCard[];
+  } catch (err) {
+    console.error(err)
+  }
+};
+// 查询热门数据
+const queryHotAnime = async () => {
+  try {
+    const res = await getHotAnime()
+    hotList.value = res.data.data as AnimeCard[];
+  } catch (err) {
+    console.error(err)
+  }
+};
+// 查询经典推荐数据
+const queryClassicRecommend = async () => {
+  try {
+    const res = await queryClassicRecommend()
+    recommendList.value = res.data.data as AnimeCard[];
+  } catch (err) {
+    console.error(err)
+  }
+};
+// 查询完结列表数据
+const queryFinishedList = async () => {
+  try {
+    const res = await queryFinishedList()
+    finishedList.value = res.data.data as AnimeCard[];
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 // --- 交互 ---
 const onMoreClick = (sectionTitle: string) => {
@@ -69,6 +125,16 @@ const router = useRouter();
 const onItemClick = (item: AnimeCard) => {
   router.push({ name: 'AnimeDetail', params: { id: item.id } });
 };
+
+
+
+onMounted(async () => {
+  await queryBanners()
+  await queryNewAnime()
+  await queryHotAnime()
+  await queryClassicRecommend()
+  await queryFinishedList()
+})
 </script>
 
 <template>
@@ -84,7 +150,7 @@ const onItemClick = (item: AnimeCard) => {
     <div class="banner-wrapper">
       <van-swipe :autoplay="4000" indicator-color="#fff">
         <van-swipe-item v-for="(img, idx) in banners" :key="idx">
-          <img :src="img" class="banner-img" />
+          <img :src="img.image_url" class="banner-img" />
         </van-swipe-item>
       </van-swipe>
     </div>
