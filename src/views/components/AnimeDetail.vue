@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import 'vant/lib/index.css';
 import { getAnimeDetail } from '@/api/index.js';
+import { formatViews } from '@/utils/format';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,31 +21,13 @@ interface AnimeDetail {
   id: string;
   title: string;
   cover: string;
-  score: number;
+  score: string;
   views: string;
   tags: string[];
-  desc: string;
+  description: string;
   status: string;
   episodes: Episode[];
 }
-
-// --- 模拟数据 ---
-let animeData = reactive<AnimeDetail>({
-  id: '1',
-  title: '鬼灭之刃 刀匠村篇',
-  cover: 'https://images.unsplash.com/photo-1612487528505-d2338264c821?q=80&w=800', // 这里的封面通常是横图
-  score: 9.8,
-  views: '1.2亿',
-  tags: ['热血', '奇幻', '战斗', '神作'],
-  status: '已完结',
-  desc: '《鬼灭之刃》的故事舞台是日本大正时代。名叫灶门炭治郎的平凡农村少年，靠着卖炭来维持一家的生计。某天他下山去卖炭，回家时天色已暗，好心的三郎爷爷变留他住了一晚。隔天他回到家却发现家人全都遭到残杀，只剩妹妹祢豆子身体还有余温...',
-  episodes: Array.from({ length: 12 }).map((_, i) => ({
-    num: i + 1,
-    title: `第${i + 1}话`,
-    isVip: i > 2, // 前3集免费
-    duration: '24:10'
-  }))
-});
 
 // 猜你喜欢模拟数据
 const recommendList = [
@@ -80,13 +63,27 @@ const handlePlayClick = () => {
 const toggleFavorite = () => {
   showToast({ message: '已加入追番列表 ❤️', icon: 'like' });
 };
+
+  // 根据id获取动画详情
   const { id } = route.params;
-  const loadDetail = async () => {
+  const animeData = reactive<AnimeDetail>({
+    id: '',
+    title: '',
+    cover: '',
+    score: '',
+    views: '',
+    tags: [],
+    description: '',
+    status: '',
+    episodes: []
+  });
+  const getDetail = async () => {
     const res = await getAnimeDetail(id)
-    // animeData = res.data
+    // 使用 Object.assign 保持响应式
+    Object.assign(animeData, res.data.data);
   }
   onMounted(() => {
-    loadDetail()
+    getDetail()
 
   });
 
@@ -141,7 +138,7 @@ const toggleFavorite = () => {
               </div>
               
               <div class="stat-row">
-                <span class="views">{{ animeData.views }}播放</span>
+                <span class="views">{{ formatViews(animeData.views) }}播放</span>
                 <span class="dot">·</span>
                 <span class="tags">
                   <span v-for="t in animeData.tags" :key="t" class="tag">#{{ t }}</span>
@@ -150,7 +147,7 @@ const toggleFavorite = () => {
 
               <!-- 简介 (带展开收起) -->
               <div class="desc-box" :class="{ expanded: isDescExpanded }" @click="toggleDesc">
-                <p>{{ animeData.desc }}</p>
+                <p>{{ animeData.description }}</p>
                 <van-icon :name="isDescExpanded ? 'arrow-up' : 'arrow-down'" class="expand-icon" />
               </div>
 
@@ -171,13 +168,13 @@ const toggleFavorite = () => {
               </div>
             </div>
 
-            <div class="divider"></div>
+            <!-- <div class="divider"></div> -->
 
             <!-- 选集区域 -->
             <div class="episode-section">
               <div class="sec-header">
                 <h3>选集</h3>
-                <span class="sub-text">{{ animeData.status }} / 共 {{ animeData.episodes.length }} 话</span>
+                <span class="sub-text">{{ animeData.status }} / 共 {{ animeData.episodes ? animeData.episodes.length : 0 }} 话</span>
               </div>
               
               <!-- 剧集网格 -->

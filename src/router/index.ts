@@ -37,7 +37,7 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
-    path: '/AnimeDetail',
+    path: '/AnimeDetail/:id',
     name: 'AnimeDetail',
     component: () => import('@/views/components/AnimeDetail.vue')
   }

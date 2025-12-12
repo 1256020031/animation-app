@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { showToast, showLoadingToast, closeToast } from 'vant';
 import 'vant/lib/index.css';
 import { getBanners, getNewAnime, getHotAnime, getClassicRecommend, getFinishedList } from '@/api/index.js';
+import { formatViews } from '@/utils/format';
 
 // --- 类型定义 ---
 type AnimeStatus = '已完结' | '更新中';
@@ -17,14 +18,6 @@ interface AnimeCard {
   score: number;
   views: string; // e.g. "158.0万"
 }
-
-interface SectionData {
-  key: string;
-  title: string;
-  icon: string; // 标题前的图标
-  list: AnimeCard[];
-}
-
 interface Banner {
   id: number;
   image_url: string;
@@ -41,29 +34,6 @@ const queryBanners = async () => {
   } catch (err) {
     console.error(err)
   }
-};
-
-// --- 2. 模拟数据生成器 ---
-// 为了演示，我们生成一些看起来像真的一样的数据
-const generateList = (count: number): AnimeCard[] => {
-  const titles = ['进击的巨人 最终季', '我推的孩子', '咒术回战 第二季', '鬼灭之刃 刀匠村篇', '无职转生 第二季', '间谍过家家', '电锯人', '葬送的芙莉莲'];
-  const covers = [
-    'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=300',
-    'https://images.unsplash.com/photo-1560942485-b2a11cc13456?q=80&w=300',
-    'https://images.unsplash.com/photo-1612487528505-d2338264c821?q=80&w=300',
-    'https://images.unsplash.com/photo-1535905557558-afc4877a26fc?q=80&w=300',
-    'https://images.unsplash.com/photo-1541562232579-512a21360020?q=80&w=300'
-  ];
-  
-  return Array.from({ length: count }).map((_, i) => ({
-    id: i,
-    title: titles[i % titles.length] ?? '',
-    cover: covers[i % covers.length] ?? '',
-    status: i % 3 === 0 ? '更新中' : '已完结',
-    episode: `第${Math.floor(Math.random() * 20) + 1}集`,
-    score: Number((8 + Math.random() * 2).toFixed(1)),
-    views: `${(Math.random() * 200 + 10).toFixed(1)}万`
-  }));
 };
 
 // --- 3. 四大板块数据 ---
@@ -101,7 +71,7 @@ const queryHotAnime = async () => {
 // 查询经典推荐数据
 const queryClassicRecommend = async () => {
   try {
-    const res = await queryClassicRecommend()
+    const res = await getClassicRecommend()
     recommendList.value = res.data.data as AnimeCard[];
   } catch (err) {
     console.error(err)
@@ -110,7 +80,7 @@ const queryClassicRecommend = async () => {
 // 查询完结列表数据
 const queryFinishedList = async () => {
   try {
-    const res = await queryFinishedList()
+    const res = await getFinishedList()
     finishedList.value = res.data.data as AnimeCard[];
   } catch (err) {
     console.error(err)
@@ -122,6 +92,7 @@ const onMoreClick = (sectionTitle: string) => {
   showToast(`查看更多: ${sectionTitle}`);
 };
 const router = useRouter();
+
 const onItemClick = (item: AnimeCard) => {
   router.push({ name: 'AnimeDetail', params: { id: item.id } });
 };
@@ -207,7 +178,7 @@ onMounted(async () => {
           <!-- 底部文字信息 -->
           <div class="info-box">
             <h3 class="anime-title">{{ item.title }}</h3>
-            <p class="views-text">{{ item.views }}观看</p>
+            <p class="views-text">{{ formatViews(item.views) }}观看</p>
           </div>
         </div>
       </div>
@@ -339,10 +310,8 @@ $text-sub: #999;
       color: #fff;
       font-size: 10px;
       font-weight: 500;
-      
-      // 参考图片布局：
-      // 倒数第二行：播放图标 + 集数
-      // 最后一行：星星 + 评分
+      display: flex;
+      justify-content: space-between;
       
       .overlay-row {
         display: flex;

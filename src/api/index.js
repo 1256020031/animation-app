@@ -18,3 +18,9 @@ export const getHotAnime = () => api.get('/api/animes/hot')
 export const getClassicRecommend = () => api.get('/api/animes/recommend')
 // 获取完结列表
 export const getFinishedList = () => api.get('/api/animes/finished')
+// 获取动画详情
+export const getAnimeDetail = (id) => api.get(`/api/animes/detail?id=${id}`)
+// 获取分类列表数据
+export const getCategoryOptions = () => api.get('/api/category/options')
+// 获取分类列表
+export const getAnimesByCategory = (data) => api.post('/api/category/queryByCategory', { params: data })

@@ -1,134 +1,82 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue';
-import { showToast } from 'vant';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { getCategoryOptions, getAnimesByCategory } from '@/api/index';
+import { formatNumber } from '@/utils/format'
+
 
 // --- 1. 类型定义升级 ---
 interface AnimeItem {
   id: number;
   title: string;
   cover: string;
-  channel: string; // 频道：日韩动漫 / 国产动漫
   area: string;    // 地区：日本 / 国产 / 欧美
   year: string;    // 年份
   score: number;
   views: number;   // 播放量(数字用于排序)
-  viewsText: string; // 展示文本
-  episodes: string;
-  updatedAt: number; // 时间戳
+  status: string;
 }
 
 // 筛选组的配置接口
 interface FilterGroup {
-  key: 'channel' | 'area' | 'year' | 'sort';
+  key: keyof typeof currentFilters;  // 限定为 currentFilters 的键类型
   label: string;
-  options: string[];
+  options: FilterOption[];
 }
 
-// --- 2. 静态配置 (复刻图片内容) ---
-const filterGroups: FilterGroup[] = [
-  { 
-    key: 'channel', 
-    label: '频道', 
-    options: ['全部', '国产动漫', '日韩动漫', '欧美动漫', '海外动漫', '卡通电影'] 
-  },
-  { 
-    key: 'area', 
-    label: '地区', 
-    options: ['全部', '国产', '日本', '欧美', '其他'] 
-  },
-  { 
-    key: 'year', 
-    label: '年份', 
-    options: ['全部', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014', '2013', '2010-2012', '更早'] 
-  },
-  { 
-    key: 'sort', 
-    label: '排序', 
-    options: ['更新', '人气', '评分'] 
-  }
-];
-
-// --- 3. 模拟总数据池 (扩展属性以支持筛选) ---
-const allAnimes: AnimeItem[] = [
-  { id: 1, title: '进击的巨人 最终季', cover: 'https://images.unsplash.com/photo-1612487528505-d2338264c821?q=80&w=300', channel: '日韩动漫', area: '日本', year: '2023', score: 9.8, views: 1580000, viewsText: '158.0万', episodes: '已完结', updatedAt: 1690000000 },
-  { id: 2, title: '我推的孩子', cover: 'https://images.unsplash.com/photo-1560942485-b2a11cc13456?q=80&w=300', channel: '日韩动漫', area: '日本', year: '2023', score: 9.3, views: 1780000, viewsText: '178.0万', episodes: '已完结', updatedAt: 1680000000 },
-  { id: 3, title: '凡人修仙传', cover: 'https://images.unsplash.com/photo-1519638831568-d9897f54ed69?q=80&w=300', channel: '国产动漫', area: '国产', year: '2022', score: 9.5, views: 2300000, viewsText: '230.0万', episodes: '更新中', updatedAt: 1670000000 },
-  { id: 4, title: '间谍过家家', cover: 'https://images.unsplash.com/photo-1535905557558-afc4877a26fc?q=80&w=300', channel: '日韩动漫', area: '日本', year: '2022', score: 9.2, views: 1650000, viewsText: '165.0万', episodes: '已完结', updatedAt: 1660000000 },
-  { id: 5, title: '瑞克和莫蒂', cover: 'https://images.unsplash.com/photo-1541562232579-512a21360020?q=80&w=300', channel: '欧美动漫', area: '欧美', year: '2021', score: 9.9, views: 800000, viewsText: '80.0万', episodes: '第六季', updatedAt: 1650000000 },
-  { id: 6, title: '雾山五行', cover: 'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?q=80&w=300', channel: '国产动漫', area: '国产', year: '2020', score: 9.9, views: 1200000, viewsText: '120.0万', episodes: '已完结', updatedAt: 1640000000 },
-  { id: 7, title: '鬼灭之刃 游郭篇', cover: 'https://images.unsplash.com/photo-1626544827763-d516dce335ca?q=80&w=300', channel: '日韩动漫', area: '日本', year: '2021', score: 9.7, views: 1920000, viewsText: '192.0万', episodes: '已完结', updatedAt: 1655000000 },
-  { id: 8, title: '双城之战', cover: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=300', channel: '欧美动漫', area: '欧美', year: '2021', score: 9.6, views: 2500000, viewsText: '2.5亿', episodes: '已完结', updatedAt: 1630000000 },
-];
+interface FilterOption {
+  label: string;
+  value: string;
+}
 
 // --- 4. 响应式状态 ---
 // 当前选中的筛选条件
 const currentFilters = reactive({
-  channel: '全部',
-  area: '全部',
-  year: '全部',
-  sort: '更新'
+  area: 'all',
+  year: 'all',
+  tag: 'all',
+  sort: 'update'
 });
 
 const displayList = ref<AnimeItem[]>([]);
 const isLoading = ref(false);
 
-// --- 5. 核心筛选逻辑 ---
-const filterData = () => {
-  isLoading.value = true;
-  
-  setTimeout(() => {
-    let temp = [...allAnimes];
-
-    // A. 频道筛选
-    if (currentFilters.channel !== '全部') {
-      temp = temp.filter(item => item.channel === currentFilters.channel);
-    }
-    
-    // B. 地区筛选
-    if (currentFilters.area !== '全部') {
-      temp = temp.filter(item => item.area === currentFilters.area);
-    }
-
-    // C. 年份筛选
-    if (currentFilters.year !== '全部') {
-      if (currentFilters.year === '更早') {
-        temp = temp.filter(item => parseInt(item.year) < 2013);
-      } else if (currentFilters.year.includes('-')) {
-         // 处理区间，如 "2010-2012"
-         // 这里简单模拟，实际可能需要更复杂的区间判断
-         temp = temp.filter(item => parseInt(item.year) >= 2010 && parseInt(item.year) <= 2012);
-      } else {
-        temp = temp.filter(item => item.year === currentFilters.year);
-      }
-    }
-
-    // D. 排序逻辑
-    if (currentFilters.sort === '评分') {
-      temp.sort((a, b) => b.score - a.score);
-    } else if (currentFilters.sort === '更新') {
-      temp.sort((a, b) => b.updatedAt - a.updatedAt);
-    } else if (currentFilters.sort === '人气') {
-      temp.sort((a, b) => b.views - a.views);
-    }
-
-    displayList.value = temp;
-    isLoading.value = false;
-  }, 400);
+// 查询所有分类选项
+let filterGroups = ref<FilterGroup[]>([]);
+const queryCategoryOptions = async () => {
+  try {
+    const res = await getCategoryOptions();
+    filterGroups.value = res.data.data;
+  } catch (error) {
+    console.log('object', error);
+  }
 };
-
-// 监听所有筛选条件的变化
-watch(currentFilters, () => {
-  filterData();
-});
-
+const queryAnimesByCategory = async() => {
+  try {
+    isLoading.value = true;
+    const res = await getAnimesByCategory({
+      area: currentFilters.area,
+      year: currentFilters.year,
+      tag: currentFilters.tag,
+      sort: currentFilters.sort
+    });
+    displayList.value = res.data.data;
+    isLoading.value = false;
+  } catch (error) {
+    console.log('查询分类动画失败:', error);
+    isLoading.value = false;
+  }
+};
 onMounted(() => {
-  filterData();
+  // filterData();
+  queryCategoryOptions()
+  queryAnimesByCategory()
 });
 
 // 点击选项
 const selectOption = (key: keyof typeof currentFilters, value: string) => {
   currentFilters[key] = value;
+  queryAnimesByCategory()
 };
 const router = useRouter()
 const onCardClick = (item: AnimeItem) => {
@@ -151,12 +99,12 @@ const onCardClick = (item: AnimeItem) => {
           <div class="row-scroll">
             <div 
               v-for="opt in group.options" 
-              :key="opt"
+              :key="opt.value"
               class="filter-pill"
-              :class="{ active: currentFilters[group.key] === opt }"
-              @click="selectOption(group.key, opt)"
+              :class="{ active: currentFilters[group.key] === opt.value }"
+              @click="selectOption(group.key, opt.value)"
             >
-              {{ opt }}
+              {{ opt.label }}
             </div>
           </div>
         </div>
@@ -182,16 +130,16 @@ const onCardClick = (item: AnimeItem) => {
             @click="onCardClick(item)"
           >
             <div class="cover-wrapper">
-              <van-image fit="cover" :src="item.cover" class="cover-img" lazy-load />
+              <img :src="item.cover" loading="lazy" />
               <!-- 角标 -->
-              <span class="status-tag" :class="{ done: item.episodes === '已完结' }">
-                {{ item.episodes }}
+              <span class="status-tag" :class="{ done: item.status === '已完结' }">
+                {{ item.status }}
               </span>
             </div>
             
             <div class="info">
               <h3 class="title">{{ item.title }}</h3>
-              <p class="sub-info">{{ item.viewsText }}观看</p>
+              <p class="sub-info">{{ formatNumber(item.views) }}观看</p>
             </div>
           </div>
         </transition-group>
@@ -296,7 +244,11 @@ $bg-active: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); // 粉色渐变
       overflow: hidden;
       margin-bottom: 6px;
 
-      .cover-img { width: 100%; height: 100%; }
+       img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
 
       .status-tag {
         position: absolute;
